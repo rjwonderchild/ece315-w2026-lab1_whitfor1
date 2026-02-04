@@ -5,7 +5,9 @@
  * Created on: February 5, 2021
  * Modified on: July 26, 2023
  * Modified on: January 20, 2025
+ * Modified on: February 3, 2026
  * Author(s):  Shyama Gandhi, Antonio Andara Lara
+ * Author(s):  Riley Whitford
  *
  * Summary:
  * 1) Declare & initialize the 7-seg display (SSD).
@@ -119,7 +121,7 @@ static void vKeypadTask( void *pvParameters )
 		} else if (status == KYPD_MULTI_KEY && status != previous_status){
 			xil_printf("Error: Multiple keys pressed\r\n");
 		}
-		
+
 /*************************** Enter your code here ****************************/
 		// TODO: display the value of `status` each time it changes
 
