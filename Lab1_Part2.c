@@ -133,7 +133,8 @@ int main(void)
 }
 
 // ADDING LED TASK
-// xPeriod: 10 is when flickering stops
+// xDelay: 10 is when flickering stops
+// This version of the code is before we write about anything regarding the PWM period.
 static void vRgbTask(void *pvParameters)
 {
     const uint8_t color = RGB_CYAN;
