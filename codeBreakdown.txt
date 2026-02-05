@@ -1,0 +1,161 @@
+#include <FreeRTOS.h>
+#include <task.h>
+#include <queue.h>
+
+FreeRTOS.h: core RTOS definitions.
+task.h: task creation (xTaskCreate), delay (vTaskDelay), scheduler control.
+queue.h: queue APIs (not used in Part 1, but used in later parts).
+------------------------------------------------------------------------------------------
+#include <xparameters.h>
+#include <xgpio.h>
+#include <xscugic.h>
+#include <xil_exception.h>
+#include <xil_printf.h>
+#include <sleep.h>
+#include <xil_cache.h>
+
+xparameters.h: auto-generated hardware definitions (base addresses, device IDs).
+
+xgpio.h: AXI GPIO driver used to talk to GPIO peripherals (SSD is a GPIO).
+
+xil_printf.h: prints to UART/terminal.
+
+xscugic.h, xil_exception.h: interrupt controller/exception support (not used in Part 1).
+
+sleep.h: sleep/usleep helpers (not used if you use vTaskDelay).
+
+xil_cache.h: cache control (not used in Part 1).
+
+------------------------------------------------------------------------------------------
+
+#include "pmodkypd.h"
+
+Provides:
+KYPD_begin
+
+KYPD_getKeyStates
+
+KYPD_getKeyPressed
+
+key status constants like KYPD_SINGLE_KEY, KYPD_NO_KEY, etc.
+
+------------------------------------------------------------------------------------------
+
+#define KYPD_DEVICE_ID    XPAR_GPIO_KYPD_BASEADDR
+
+Connect software to the SSD's AXI GPIO
+
+------------------------------------------------------------------------------------------
+
+#define DEFAULT_KEYTABLE "0FED789C456B123A"
+This is the mapping the keypad library uses from matrix position → ASCII character. It’s arranged so that the physical keypad layout corresponds to those characters.
+
+-------------------------------------------------------------------------------------------
+
+PmodKYPD KYPDInst;
+This is the keypad “driver instance” (a struct). The keypad functions take a pointer to this.
+TODO: declare SSD peripheral
+You need an instance for the SSD GPIO, typically:
+XGpio SSDInst;
+
+-------------------------------------------------------------------------------------------
+
+void InitializeKeypad();
+static void vKeypadTask(void *pvParameters);
+u32 SSD_decode(u8 key_value, u8 cathode);
+
+InitializeKeypad() sets up the keypad hardware and loads key table.
+
+vKeypadTask() is your FreeRTOS task function (runs forever).
+
+SSD_decode() converts ASCII key value → seven-seg bit pattern (+ selects digit).
+
+----------------------------------------------------------------------------------------------
+
+int main(void)
+{
+    int status;
+status is intended for return codes from Xilinx init functions (success/fail).
+
+InitializeKeypad();
+Calls the function at the bottom:
+
+KYPD_begin(...)
+
+KYPD_loadKeyTable(...)
+
+TODO: Initialize SSD and set GPIO direction
+Initialize the XGpio instance (XGpio_Initialize)
+
+Set channel direction to outputs (XGpio_SetDataDirection)
+
+This is required before you can write segment values to the display.
+xil_printf("Initialization Complete, System Ready!\n");
+
+Writes to UART terminal.
+
+xTaskCreate(vKeypadTask,
+            "main task",
+            configMINIMAL_STACK_SIZE,
+            NULL,
+            tskIDLE_PRIORITY,
+            NULL);
+
+Meaning:
+
+Task function: vKeypadTask
+
+Name: for debugging
+
+Stack: minimal (often enough for simple tasks)
+
+Parameter: none
+
+Priority: idle-level priority (lowest)
+
+Task handle: none saved
+
+vTaskStartScheduler();
+
+After this, FreeRTOS takes over. main typically never returns.
+
+-----------------------------------------------------------------------------------------
+
+vKeypadTask()
+
+u16 keystate;
+XStatus status, previous_status = KYPD_NO_KEY;
+u8 new_key, current_key = 'x', previous_key = 'x';
+u32 ssd_value = 0;
+
+keystate: raw matrix state from keypad (bitfield).
+
+status: return status from KYPD_getKeyPressed (no key / single / multi).
+
+previous_status: used to detect transitions (so you only print once).
+
+new_key: the key that was just detected.
+
+current_key: most recently pressed key (display right).
+
+previous_key: key before current (display left).
+
+ssd_value: the 32-bit value you will write to GPIO for SSD.
+
+--------------------------------------------------------------------------------------
+
+TODO: xDelay
+const TickType_t xDelay = pdMS_TO_TICKS(100);
+This controls how long each digit stays lit before switching.
+
+xil_printf("Pmod KYPD app started. Press any key on the Keypad.\r\n");
+
+
+TODO: update previous_key and current_key
+previous_key = current_key;
+current_key  = new_key;
+
+TODO: print status when it changes
+
+This section should compare status and previous_status and print when different.
+previous_status = status;
