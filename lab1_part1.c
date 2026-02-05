@@ -8,7 +8,7 @@
  * Modified on: February 5, 2026
  * Author(s):  Shyama Gandhi, Antonio Andara Lara
  * 
- * Author(s): Riley Whitford, Komaldeep Taggar
+ * Author(s): Riley Whitford (whitfor1), Komaldeep Taggar (ktaggar)
  *
  * Summary:
  * 1) Declare & initialize the 7-seg display (SSD).
@@ -208,4 +208,5 @@ u32 SSD_decode(u8 key_value, u8 cathode)
             return result | 0b10000000;
 	}
 }
+
 
