@@ -134,11 +134,11 @@ int main(void)
 
 // ADDING LED TASK
 // xDelay: 10 is when flickering stops
-// This version of the code is before we write about anything regarding the PWM period.
 static void vRgbTask(void *pvParameters)
 {
     const uint8_t color = RGB_CYAN;
 	const TickType_t xPeriod = 100;
+    const TickType_t xPWM = 10;
     TickType_t xDelay = xPeriod / 2;
     const TickType_t xButt  = 50;
 	xil_printf("\nxPeriod: %d\n", xPeriod);
@@ -147,10 +147,10 @@ static void vRgbTask(void *pvParameters)
 
     while (1){
         XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
-        vTaskDelay(xDelay);
+        vTaskDelay(xPWM);
         XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
-        vTaskDelay(xDelay);
-
+        vTaskDelay(xPWM);
+        /*
         int readPushVal = XGpio_DiscreteRead(&pushInst, 1);
             
         if (readPushVal == 8) {
@@ -163,10 +163,10 @@ static void vRgbTask(void *pvParameters)
                 xil_printf("\nxPeriod: %d\n", xDelay);
                 vTaskDelay(xButt);
             }
-            
+            */
         }
-    }
 }
+
 
 static void vKeypadTask( void *pvParameters )
 {
