@@ -1,13 +1,13 @@
 /*
  * Lab 1, Part 1 - Seven-Segment Display & Keypad
  *
- * ECE-315 WINTER 2025 - COMPUTER INTERFACING
+ * ECE-315 WINTER 2026 - COMPUTER INTERFACING
  * Created on: February 5, 2021
  * Modified on: July 26, 2023
  * Modified on: January 20, 2025
  * Modified on: February 5, 2026
  * Author(s):  Shyama Gandhi, Antonio Andara Lara
- * 
+ *
  * Author(s): Riley Whitford (whitfor1), Komaldeep Taggar (ktaggar)
  *
  * Summary:
@@ -83,6 +83,7 @@ int main(void)
         xil_printf("GPIO Initialization for SSD failed.\r\n");
         return XST_FAILURE;
     }
+
     XGpio_SetDataDirection(&SSDInst, 1, 0x00);
 
 /*****************************************************************************/
@@ -131,6 +132,7 @@ static void vKeypadTask( void *pvParameters )
 			xil_printf("Key Pressed: %c\r\n", (char) new_key);
 /*************************** Enter your code here ****************************/
 			// TODO: update value of previous_key and current_key
+
             previous_key = current_key;
             current_key = new_key;
 
@@ -138,9 +140,10 @@ static void vKeypadTask( void *pvParameters )
 		} else if (status == KYPD_MULTI_KEY && status != previous_status){
 			xil_printf("Error: Multiple keys pressed\r\n");
 		}
-		
+
 /*************************** Enter your code here ****************************/
 		// TODO: display the value of `status` each time it changes
+
         if (status != previous_status) {
             xil_printf("Status changed: %d\r\n", status);
         }
@@ -154,14 +157,14 @@ static void vKeypadTask( void *pvParameters )
 		* using the `XGpio_DiscreteWrite` function.
 		* Add a delay between updates for persistence of vision using `vTaskDelay`.
 		*/
+
         ssd_value = SSD_decode(current_key, 1);
         XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
         vTaskDelay(xDelay);
+
         ssd_value = SSD_decode(previous_key, 0);
         XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
-        vTaskDelay(xDelay);        
-
-
+        vTaskDelay(xDelay);
 
 /*****************************************************************************/
 	}
