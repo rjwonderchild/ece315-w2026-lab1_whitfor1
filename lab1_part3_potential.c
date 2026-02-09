@@ -73,12 +73,19 @@ XGpio       rgbLedInst;
 
 XGpio       pushInst;
 
+// Declaring the Queues
+
+QueueHandle_t xKeypadQueue;
+QueueHandle_t xButtonQueue;
+
 /*****************************************************************************/
 
 // Function prototypes
 void InitializeKeypad();
 static void vKeypadTask( void *pvParameters );
 static void vRgbTask(void *pvParameters);   // Added vRbgTask function here
+static void vButtonsTask(void *pvParameters); // Added vButtonsTask function here
+static void vDisplayTask(void *pvParameters); // Added vDisplayTask function herer
 u32 SSD_decode(u8 key_value, u8 cathode);
 
 
@@ -133,6 +140,22 @@ int main(void)
     // Creating the vRgbTask to start the RGB Leds.
     xTaskCreate(vRgbTask,
                 "rgb task",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY,
+                NULL);
+
+    // Create the Button Task.
+    xTaskCreate(vButtonsTask,
+                "button task",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY,
+                NULL);
+
+    // Create the Display Task.
+    xTaskCreate(vDisplayTask,
+                "display task",
                 configMINIMAL_STACK_SIZE,
                 NULL,
                 tskIDLE_PRIORITY,
