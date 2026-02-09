@@ -75,8 +75,8 @@ XGpio       pushInst;
 
 // Declaring the Queues
 
-QueueHandle_t xKeypadQueue;
-QueueHandle_t xButtonQueue;
+QueueHandle_t xKey2DisplayQueue;
+QueueHandle_t xButt2RGBQueue;
 
 /*****************************************************************************/
 
