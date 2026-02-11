@@ -5,7 +5,7 @@
  * Created on: February 5, 2021
  * Modified on: July 26, 2023
  * Modified on: January 20, 2025
- * Modified on: February 5, 2026
+ * Modified on: February 11, 2026
  * Author(s):  Shyama Gandhi, Antonio Andara Lara
  *
  * Author(s): Riley Whitford (whitfor1), Komaldeep Taggar (ktaggar)
@@ -148,16 +148,19 @@ int main(void)
 static void vRgbTask(void *pvParameters)
 {
     const uint8_t color = RGB_CYAN;
-	const TickType_t xPeriod = 100;
-	TickType_t xOn = 10;
-	TickType_t xOff = xPeriod - xOn;
-    TickType_t dutyCycle = (xOn * 100) / xPeriod;
-    const TickType_t xButt  = 50;   // Delay for button presses, ensures no overshooting
+	const TickType_t xPeriod = 10;
+	TickType_t xOn = 5;
+	TickType_t xOff;
+    TickType_t dutyCycle;
+    const TickType_t xButt  = pdMS_TO_TICKS(150);   // Delay for button presses, ensures no overshooting
 	xil_printf("\nxPeriod: %d\n", xPeriod);
 
 
 
     while (1){
+
+        xOff = xPeriod - xOn;
+        dutyCycle = (xOn * 100) / xPeriod;
 
         // LED is ON here
         XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
@@ -167,21 +170,19 @@ static void vRgbTask(void *pvParameters)
         XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
         vTaskDelay(xOff);
 
-        // Button input
+         // Button input
         int readPush = XGpio_DiscreteRead(&pushInst, 1);
-
+    
         // Increase brightness (was previously increase delay)
-        if (readPush == 8 && xOn < (xPeriod - 1)) {
+        if (readPush == 8 && xOn <= (xPeriod - 1)) {
             xOn ++;
-            xOff = xPeriod - xOn;
-            xil_printf("\nDuty Cycle: %d\n", dutyCycle);
+            xil_printf("Brightness: %d%%\r\n", dutyCycle);
             vTaskDelay(xButt);
 
         // Decrease brightness (was previously decrease delay)
         } else if (readPush == 1 && xOn > 1) {
             xOn--;
-            xOff = xPeriod - xOn;
-            xil_printf("\nDuty Cycle: %d\n", dutyCycle);
+            xil_printf("Brightness: %d%%\r\n", dutyCycle);
             vTaskDelay(xButt);
             }
         }
@@ -299,3 +300,4 @@ u32 SSD_decode(u8 key_value, u8 cathode)
             return result | 0b10000000;
 	}
 }
+
