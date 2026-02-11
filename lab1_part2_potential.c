@@ -151,7 +151,6 @@ static void vRgbTask(void *pvParameters)
 	const TickType_t xPeriod = 10;
 	TickType_t xOn = 5;
 	TickType_t xOff;
-    TickType_t dutyCycle;
     const TickType_t xButt  = pdMS_TO_TICKS(150);   // Delay for button presses, ensures no overshooting
 	xil_printf("\nxPeriod: %d\n", xPeriod);
 
@@ -159,8 +158,25 @@ static void vRgbTask(void *pvParameters)
 
     while (1){
 
+
+
+         // Button input
+        int readPush = XGpio_DiscreteRead(&pushInst, 1);
+    
+        // Increase brightness (was previously increase delay)
+        if (readPush == 8 && xOn <= (xPeriod - 1)) {
+            xOn ++;
+            xil_printf("Brightness: %d%%\r\n", ((xOn * 100) / xPeriod));
+            vTaskDelay(xButt);
+
+        // Decrease brightness (was previously decrease delay)
+        } else if (readPush == 1 && xOn > 1) {
+            xOn--;
+            xil_printf("Brightness: %d%%\r\n", ((xOn * 100) / xPeriod));
+            vTaskDelay(xButt);
+            }
+
         xOff = xPeriod - xOn;
-        dutyCycle = (xOn * 100) / xPeriod;
 
         // LED is ON here
         XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
@@ -169,22 +185,6 @@ static void vRgbTask(void *pvParameters)
         // LED is OFF here
         XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
         vTaskDelay(xOff);
-
-         // Button input
-        int readPush = XGpio_DiscreteRead(&pushInst, 1);
-    
-        // Increase brightness (was previously increase delay)
-        if (readPush == 8 && xOn <= (xPeriod - 1)) {
-            xOn ++;
-            xil_printf("Brightness: %d%%\r\n", dutyCycle);
-            vTaskDelay(xButt);
-
-        // Decrease brightness (was previously decrease delay)
-        } else if (readPush == 1 && xOn > 1) {
-            xOn--;
-            xil_printf("Brightness: %d%%\r\n", dutyCycle);
-            vTaskDelay(xButt);
-            }
         }
 }
 
@@ -300,4 +300,3 @@ u32 SSD_decode(u8 key_value, u8 cathode)
             return result | 0b10000000;
 	}
 }
-
