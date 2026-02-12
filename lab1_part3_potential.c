@@ -176,7 +176,7 @@ int main(void)
                 tskIDLE_PRIORITY,
                 NULL);
 
-	xTaskCreat(vButtonsTask,
+	xTaskCreate(vButtonsTask,
 				"button task"
 				configMINIMAL_STACK_SIZE,
 				NULL,
