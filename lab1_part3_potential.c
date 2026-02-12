@@ -80,13 +80,18 @@ typedef struct {
     u8 previous;
 } key_t;
 
+typedef struct {
+    TickType_t xOn;
+    TickType_t xPeriod;
+} duty_t;
+
 /*****************************************************************************/
 
 // Function prototypes
 void InitializeKeypad();
 static void vKeypadTask( void *pvParameters );
 static void vRgbTask(void *pvParameters);   // Added vRbgTask function here
-//static void vButtonsTask(void *pvParameters);
+static void vButtonsTask(void *pvParameters);
 static void vDisplayTask(void *pvParameters);
 u32 SSD_decode(u8 key_value, u8 cathode);
 
@@ -109,7 +114,7 @@ int main(void)
             return XST_FAILURE;
         }
     
-    xbtn2rgb = xQueueCreate(1, sizeof(int));
+    xbtn2rgb = xQueueCreate(1, sizeof(duty_t));
         if( xbtn2rgb == NULL) {
             xil_printf("Failed to create button to rgb queue.\r\n");
             return XST_FAILURE;
@@ -172,12 +177,12 @@ int main(void)
                 tskIDLE_PRIORITY,
                 NULL);
 
-    //xTaskCreate(vButtonsTask,
-    //            "button task",
-    //            configMINIMAL_STACK_SIZE,
-    //            NULL,
-    //            tskIDLE_PRIORITY,
-    //            NULL);
+    xTaskCreate(vButtonsTask,
+                "button task",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY,
+                NULL);
 
 
 	vTaskStartScheduler();
@@ -190,43 +195,30 @@ int main(void)
 static void vRgbTask(void *pvParameters)
 {
     const uint8_t color = RGB_CYAN;
-	const TickType_t xPeriod = 10;
-	TickType_t xOn = 5;
 	TickType_t xOff;
-    const TickType_t xBtn  = pdMS_TO_TICKS(150);   // Delay for button presses, ensures no overshooting
-    vTaskDelay(xBtn);
-	xil_printf("\nxPeriod: %d\n", xPeriod);
-
-
+    duty_t rxBtn;
 
     while (1){
         
-         // Button input
-        int readPush = XGpio_DiscreteRead(&pushInst, 1);
-    
-        // Increase brightness (was previously increase delay)
-        if (readPush == 8 && xOn <= (xPeriod - 1)) {
-            xOn++;
-            xil_printf("Brightness: %d%%\r\n", ((xOn * 100) / xPeriod));
-            vTaskDelay(xBtn);
+        if (xQueueReceive(xbtn2rgb, &rxBtn, 0) == pdPASS) {
 
-        // Decrease brightness (was previously decrease delay)
-        } else if (readPush == 1 && xOn > 1) {
-            xOn--;
-            xil_printf("Brightness: %d%%\r\n", ((xOn * 100) / xPeriod));
-            vTaskDelay(xBtn);
+            xOff = rxBtn.xPeriod - rxBtn.xOn;
+
+            if (rxBtn.xOn == 0) {
+                // LED is OFF here
+                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
+                vTaskDelay(xOff);
+            } else {
+                // LED is ON here
+                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
+                vTaskDelay(rxBtn.xOn);
+                // LED is OFF here
+                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
+                vTaskDelay(xOff);
             }
-
-        xOff = xPeriod - xOn;
-
-        // LED is ON here
-        XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
-        vTaskDelay(xOn);
-
-        // LED is OFF here
-        XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
-        vTaskDelay(xOff);
         }
+    }
+
 }
 
 
@@ -237,16 +229,6 @@ static void vKeypadTask( void *pvParameters )
 	XStatus status, previous_status = KYPD_NO_KEY;
 	u8 new_key, current_key = 'x', previous_key = 'x';
     const TickType_t debounceDelay = 25;
-	//u32 ssd_value=0;
-
-/*************************** Enter your code here ****************************/
-	// TODO: Define a constant of type TickType_t named 'xDelay' and initialize
-	//       it with a value of 100.
-
-    //const TickType_t xDelay = pdMS_TO_TICKS(12);
-    // 10 works, 15 has slight flickering, 12 seems to have no flickering.
-
-/*****************************************************************************/
 
     xil_printf("Pmod KYPD app started. Press any key on the Keypad.\r\n");
 	while (1){
@@ -291,23 +273,6 @@ static void vKeypadTask( void *pvParameters )
 
         xQueueOverwrite(xkey2display, &txKey);
 
-/*************************** Enter your code here ****************************/
-		/* TODO: Decode the current and previous keys using the `SSD_decode` function.
-		* Write each decoded value to the seven-segment display, one at a time,
-		* using the `XGpio_DiscreteWrite` function.
-		* Add a delay between updates for persistence of vision using `vTaskDelay`.
-		*/
-
-       // ssd_value = SSD_decode(current_key, 1);
-       // XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
-       // vTaskDelay(xDelay);
-
-      //  ssd_value = SSD_decode(previous_key, 0);
-      //  XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
-      //  vTaskDelay(xDelay);
-
-
-
 /*****************************************************************************/
 	}
 }
@@ -332,6 +297,37 @@ static void vDisplayTask(void *pvParameters)
             vTaskDelay(xDelay);
 
         }
+    }
+}
+
+static void vButtonsTask(void *pvParameters)
+{
+
+const TickType_t xBtnDelay  = pdMS_TO_TICKS(150);
+duty_t txBtn;
+txBtn.xPeriod = 10;
+txBtn.xOn = 5;
+
+while (1)
+    {
+         // Button input
+        int readPush = XGpio_DiscreteRead(&pushInst, 1);
+    
+        // Increase brightness (was previously increase delay)
+        if (readPush == 8 && txBtn.xOn <= (txBtn.xPeriod - 1)) 
+        {
+            txBtn.xOn++;
+            xil_printf("Brightness: %d%%\r\n", ((txBtn.xOn * 100) / txBtn.xPeriod));
+            vTaskDelay(xBtnDelay);
+
+        // Decrease brightness (was previously decrease delay)
+        } else if (readPush == 1 && txBtn.xOn > 0) {
+            txBtn.xOn--;
+            xil_printf("Brightness: %d%%\r\n", ((txBtn.xOn * 100) / txBtn.xPeriod));
+            vTaskDelay(xBtnDelay);
+        }
+        
+        xQueueOverwrite(xbtn2rgb, &txBtn);
     }
 }
 
