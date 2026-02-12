@@ -258,6 +258,7 @@ static void vButtonsTask(void *pvParameters) {
 
 		xQueueOverwrite(xBtn2RGBQueue, &xOn);
 			vTaskDelay(xBtn);
+        }
     }
 }
 
