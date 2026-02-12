@@ -5,7 +5,7 @@
  * Created on: February 5, 2021
  * Modified on: July 26, 2023
  * Modified on: January 20, 2025
- * Modified on: February 11, 2026
+ * Modified on: February 12, 2026
  * Author(s):  Shyama Gandhi, Antonio Andara Lara
  *
  * Author(s): Riley Whitford (whitfor1), Komaldeep Taggar (ktaggar)
@@ -169,7 +169,7 @@ static void vRgbTask(void *pvParameters)
             vTaskDelay(xBtn);
 
         // Decrease brightness (was previously decrease delay)
-        } else if (readPush == 1 && xOn > 1) {
+        } else if (readPush == 1 && xOn > 0) {
             xOn--;
             xil_printf("Brightness: %d%%\r\n", ((xOn * 100) / xPeriod));
             vTaskDelay(xBtn);
@@ -177,14 +177,20 @@ static void vRgbTask(void *pvParameters)
 
         xOff = xPeriod - xOn;
 
-        // LED is ON here
-        XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
-        vTaskDelay(xOn);
+        if (xOn == 0) {
+            // LED is OFF here
+            XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
+            vTaskDelay(xOff);
+        } else {
+            // LED is ON here
+            XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
+            vTaskDelay(xOn);
 
-        // LED is OFF here
-        XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
-        vTaskDelay(xOff);
+            // LED is OFF here
+            XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
+            vTaskDelay(xOff);
         }
+    }
 }
 
 
