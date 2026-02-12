@@ -75,8 +75,8 @@ XGpio       pushInst;
 
 // Declaring Queues
 
-QueueHandle_t xKey2DisplayQueue == NULL;
-QueueHandle_t xBtn2RGBQueue == NULL;
+QueueHandle_t xKey2DisplayQueue =  NULL;
+QueueHandle_t xBtn2RGBQueue = NULL;
 
 // Struct for keypad values
 
@@ -86,7 +86,7 @@ typedef struct {
 } padData_t;
 
 typedef struct {
-	uint8_t	xOn
+	TickType_t	xOn;
 }	xOn_t;
 
 /*****************************************************************************/
@@ -177,7 +177,7 @@ int main(void)
                 NULL);
 
 	xTaskCreate(vButtonsTask,
-				"button task"
+				"button task",
 				configMINIMAL_STACK_SIZE,
 				NULL,
 				tskIDLE_PRIORITY,
@@ -194,7 +194,7 @@ static void vRgbTask(void *pvParameters)
 {
     const uint8_t color = RGB_CYAN;
 	const TickType_t xPeriod = 10;
-	xOn_t xOn = 5;
+	TickType_t xOn = 5;
 	xOn_t rxOn;
 	TickType_t xOff;
 
@@ -202,7 +202,7 @@ static void vRgbTask(void *pvParameters)
 	{
 		if (xQueueReceive(xBtn2RGBQueue, &rxOn, 0) == pdTRUE)
 		{
-			xOn = rxOn;
+			xOn = rxOn.xOn;
 			xil_printf("Brightness: %d%%\r\n", (xOn * 100) / xPeriod);
 		}
 		
@@ -230,17 +230,18 @@ static void vDisplayTask(void *pvParameters) {
         {
             ssd_value = SSD_decode(rxData.current, 1);
             XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
-            vTaskDelay(xOn);
+            vTaskDelay(xDelay);
 
             ssd_value = SSD_decode(rxData.previous, 0);
             XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
-            vTaskDelay(xOff);
+            vTaskDelay(xDelay);
         }
     }
 }
 
 static void vButtonsTask(void *pvParameters) {
-	xOn_t xOn = 5;
+	xOn_t xOn;
+    xOn.xOn = 5;
 	const TickType_t xBtn  = pdMS_TO_TICKS(150);   // Delay for button presses, ensures no overshooting
 
 	while (1)
@@ -249,11 +250,11 @@ static void vButtonsTask(void *pvParameters) {
         int readPush = XGpio_DiscreteRead(&pushInst, 1);
     
         // Increase brightness (was previously increase delay)
-        if (readPush == 8 && xOn <= 9)) {
-            xOn++;
+        if (readPush == 8 && xOn.xOn <= 9) {
+            xOn.xOn++;
         // Decrease brightness (was previously decrease delay)
-        } else if (readPush == 1 && xOn > 1) {
-            xOn--;
+        } else if (readPush == 1 && xOn.xOn > 1) {
+            xOn.xOn--;
 
 		xQueueOverwrite(xBtn2RGBQueue, &xOn);
 			vTaskDelay(xBtn);
