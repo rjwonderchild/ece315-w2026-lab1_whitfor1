@@ -24,6 +24,7 @@
 
 // Include FreeRTOS Libraries
 #include <FreeRTOS.h>
+#include <FreeRTOSConfig.h>
 #include <task.h>
 #include <queue.h>
 
@@ -113,6 +114,7 @@ int main(void)
             xil_printf("Failed to create key to display queue.\r\n");
             return XST_FAILURE;
         }
+    
     
     xbtn2rgb = xQueueCreate(1, sizeof(duty_t));
         if( xbtn2rgb == NULL) {
