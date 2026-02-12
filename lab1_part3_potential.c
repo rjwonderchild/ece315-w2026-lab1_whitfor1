@@ -75,8 +75,8 @@ XGpio       pushInst;
 
 // Declaring Queues
 
-QueueHandle_t xKey2DisplayQueue;
-//QueueHandle_t xBtn2RGBQueue;
+QueueHandle_t xKey2DisplayQueue == NULL;
+QueueHandle_t xBtn2RGBQueue == NULL;
 
 // Struct for keypad values
 
@@ -85,6 +85,9 @@ typedef struct {
     u8 previous;
 } padData_t;
 
+typedef struct {
+	uint8_t	xOn
+}	xOn_t;
 
 /*****************************************************************************/
 
@@ -92,7 +95,7 @@ typedef struct {
 void InitializeKeypad();
 static void vKeypadTask(void *pvParameters);
 static void vRgbTask(void *pvParameters);   // Added vRbgTask function here
-//static void vButtonsTask(void *pvParameters); // Added vButtonsTask function here
+static void vButtonsTask(void *pvParameters); // Added vButtonsTask function here
 static void vDisplayTask(void *pvParameters); // Added vDisplayTask function here
 u32 SSD_decode(u8 key_value, u8 cathode);
 
@@ -160,11 +163,11 @@ int main(void)
             return XST_FAILURE;
         }
 
-    //xBtn2RGBQueue = xQueueCreate(1, sizeof(int));
-    //    if (xBtn2RGBQueue == NULL) {
-    //        xil_printf("Failed to create Btn2RGB queue");
-    //        return XST_FAILURE;
-    //    }    
+    xBtn2RGBQueue = xQueueCreate(1, sizeof(xOn_t));
+        if (xBtn2RGBQueue == NULL) {
+            xil_printf("Failed to create Btn2RGB queue");
+            return XST_FAILURE;
+        }    
 
     xTaskCreate(vDisplayTask,
                 "display task",
@@ -172,6 +175,13 @@ int main(void)
                 NULL,
                 tskIDLE_PRIORITY,
                 NULL);
+
+	xTaskCreat(vButtonsTask,
+				"button task"
+				configMINIMAL_STACK_SIZE,
+				NULL,
+				tskIDLE_PRIORITY,
+				NULL);
 
 	vTaskStartScheduler();
 	while(1);
@@ -184,32 +194,18 @@ static void vRgbTask(void *pvParameters)
 {
     const uint8_t color = RGB_CYAN;
 	const TickType_t xPeriod = 10;
-	TickType_t xOn = 5;
+	xOn_t xOn = 5;
+	xOn_t rxOn;
 	TickType_t xOff;
-    const TickType_t xBtn  = pdMS_TO_TICKS(150);   // Delay for button presses, ensures no overshooting
-    vTaskDelay(xBtn);
-	xil_printf("\nxPeriod: %d\n", xPeriod);
 
-
-
-    while (1){
-        
-         // Button input
-        int readPush = XGpio_DiscreteRead(&pushInst, 1);
-    
-        // Increase brightness (was previously increase delay)
-        if (readPush == 8 && xOn <= (xPeriod - 1)) {
-            xOn++;
-            xil_printf("Brightness: %d%%\r\n", ((xOn * 100) / xPeriod));
-            vTaskDelay(xBtn);
-
-        // Decrease brightness (was previously decrease delay)
-        } else if (readPush == 1 && xOn > 1) {
-            xOn--;
-            xil_printf("Brightness: %d%%\r\n", ((xOn * 100) / xPeriod));
-            vTaskDelay(xBtn);
-            }
-
+    while (1)
+	{
+		if (xQueueReceive(xBtn2RGBQueue, &rxOn, 0) == pdTRUE)
+		{
+			xOn = rxOn;
+			xil_printf("Brightness: %d%%\r\n", (xOn * 100) / xPeriod);
+		}
+		
         xOff = xPeriod - xOn;
 
         // LED is ON here
@@ -224,36 +220,49 @@ static void vRgbTask(void *pvParameters)
 
 
 static void vDisplayTask(void *pvParameters) {
-    padData_t receivedData;
+    padData_t rxData;
     u32 ssd_value = 0;
     const TickType_t xDelay = pdMS_TO_TICKS(12);
 
     while(1) 
     {
-        if (xQueueReceive(xKey2DisplayQueue, &receivedData, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(xKey2DisplayQueue, &rxData, portMAX_DELAY) == pdTRUE)
         {
-            while(1) 
-            {
-                ssd_value = SSD_decode(receivedData.current, 1);
-                XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
-                vTaskDelay(xDelay);
+            ssd_value = SSD_decode(rxData.current, 1);
+            XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
+            vTaskDelay(xOn);
 
-                ssd_value = SSD_decode(receivedData.previous, 0);
-                XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
-                vTaskDelay(xDelay);
-
-                if (xQueueReceive(xKey2DisplayQueue, &receivedData, 0) == pdTRUE)
-                {
-                    break;
-                }
-            }
+            ssd_value = SSD_decode(rxData.previous, 0);
+            XGpio_DiscreteWrite(&SSDInst, 1, ssd_value);
+            vTaskDelay(xOff);
         }
+    }
+}
+
+static void vButtonsTask(void *pvParameters) {
+	xOn_t xOn = 5;
+	const TickType_t xBtn  = pdMS_TO_TICKS(150);   // Delay for button presses, ensures no overshooting
+
+	while (1)
+	{
+         // Button input
+        int readPush = XGpio_DiscreteRead(&pushInst, 1);
+    
+        // Increase brightness (was previously increase delay)
+        if (readPush == 8 && xOn <= 9)) {
+            xOn++;
+        // Decrease brightness (was previously decrease delay)
+        } else if (readPush == 1 && xOn > 1) {
+            xOn--;
+
+		xQueueOverwrite(xBtn2RGBQueue, &xOn);
+			vTaskDelay(xBtn);
     }
 }
 
 static void vKeypadTask( void *pvParameters )
 {
-    padData_t keyData;
+	padData_t txData;
 	u16 keystate;
 	XStatus status, previous_status = KYPD_NO_KEY;
 	u8 new_key, current_key = 'x', previous_key = 'x';
@@ -277,10 +286,10 @@ static void vKeypadTask( void *pvParameters )
             previous_key = current_key;
             current_key = new_key;
 
-            keyData.current = current_key;
-            keyData.previous = previous_key;
+            txData.current = current_key;
+            txData.previous = previous_key;
 
-            xQueueOverwrite(xKey2DisplayQueue, &keyData);
+            xQueueOverwrite(xKey2DisplayQueue, &txData);
 
 /*****************************************************************************/
 		} else if (status == KYPD_MULTI_KEY && status != previous_status){
@@ -299,8 +308,6 @@ static void vKeypadTask( void *pvParameters )
 		previous_status = status;
 
 /*****************************************************************************/
-	vTaskDelay(pdMS_TO_TICKS(20));
-
     }
 }
 
