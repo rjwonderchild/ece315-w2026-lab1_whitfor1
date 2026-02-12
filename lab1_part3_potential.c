@@ -190,38 +190,6 @@ int main(void)
 	return 0;
 }
 
-// RGB Led task being defined here; vRgbTask
-// xDelay: 10 is when flickering stops, will be used for PWM period value
-static void vRgbTask(void *pvParameters)
-{
-    const uint8_t color = RGB_CYAN;
-	TickType_t xOff;
-    duty_t rxBtn;
-
-    while (1){
-        
-        if (xQueueReceive(xbtn2rgb, &rxBtn, 0) == pdPASS) {
-
-            xOff = rxBtn.xPeriod - rxBtn.xOn;
-
-            if (rxBtn.xOn == 0) {
-                // LED is OFF here
-                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
-                vTaskDelay(xOff);
-            } else {
-                // LED is ON here
-                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
-                vTaskDelay(rxBtn.xOn);
-                // LED is OFF here
-                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
-                vTaskDelay(xOff);
-            }
-        }
-    }
-
-}
-
-
 static void vKeypadTask( void *pvParameters )
 {
 	key_t txKey;
@@ -329,6 +297,37 @@ while (1)
         
         xQueueOverwrite(xbtn2rgb, &txBtn);
     }
+}
+
+// RGB Led task being defined here; vRgbTask
+// xDelay: 10 is when flickering stops, will be used for PWM period value
+static void vRgbTask(void *pvParameters)
+{
+    const uint8_t color = RGB_CYAN;
+	TickType_t xOff;
+    duty_t rxBtn;
+
+    while (1){
+        
+        if (xQueueReceive(xbtn2rgb, &rxBtn, 0) == pdPASS) {
+
+            xOff = rxBtn.xPeriod - rxBtn.xOn;
+
+            if (rxBtn.xOn == 0) {
+                // LED is OFF here
+                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
+                vTaskDelay(xOff);
+            } else {
+                // LED is ON here
+                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, color);
+                vTaskDelay(rxBtn.xOn);
+                // LED is OFF here
+                XGpio_DiscreteWrite(&rgbLedInst, RGB_CHANNEL, 0);
+                vTaskDelay(xOff);
+            }
+        }
+    }
+
 }
 
 void InitializeKeypad()
