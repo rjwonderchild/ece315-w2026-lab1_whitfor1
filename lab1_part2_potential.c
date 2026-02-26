@@ -48,7 +48,7 @@
 
 #define SSD_DEVICE_ID       XPAR_GPIO_SSD_BASEADDR
 
-// Defining the RBG Leds and the push buttons base addresses.
+// Defining the RGB LEDs and the push buttons base addresses.
 
 #define LEDS_DEVICE_ID      XPAR_GPIO_LEDS_BASEADDR
 
